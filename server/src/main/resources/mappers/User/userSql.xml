@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="KimJeongKyun.wargame.Router.UserDao">
+
+    <select id="selectUserForLogin" parameterType="Map" resultType="CamelListMap">
+        /* selectUserForLogin */
+        SELECT *
+          FROM TB_USER
+         WHERE EMAIL = #{email}
+           AND PASSWORD = #{hashPw}
+    </select>
+
+    <insert id="insertSession" parameterType="Map">
+        /* insertSession */
+        INSERT INTO TB_SESSION (
+            SESSION_ID
+          , USER_ID
+          , S_AUTH
+          , JSESSIONID
+          , SESSION_EXP
+        ) VALUES (
+            SESSION_SEQ.NEXTVAL
+          , #{userId}
+          , #{sAuth}
+          , #{jsessionid}
+          , SYSDATE + #{sessionExp}/(24*60) -- session_exp 분 후 세션 파기
+        )
+    </insert>
+
+    <select id="selectUserSession" parameterType="Map" resultType="CamelListMap">
+        /* selectUserSession */
+        SELECT A.USER_ID
+             , A.EMAIL
+             , A.NAME
+             , A.ROLE
+             , A.FILE_ID
+             , B.S_AUTH
+             , (CASE WHEN (B.SESSION_EXP &lt; SYSDATE)
+                     THEN 'Y'
+                     ELSE 'N'
+                     END
+               ) TIME_OVER
+                <!--
+                    >  : &gt;
+                    <  : &lt;
+                    >= : &gt;=
+                    <= : &lt;=
+                -->
+          FROM TB_USER A
+          LEFT OUTER JOIN TB_SESSION B
+            ON A.USER_ID = B.USER_ID
+         WHERE B.S_AUTH = #{sAuth}
+    </select>
+
+    <delete id="deleteSession" parameterType="Map">
+        /* deleteSession */
+        DELETE
+          FROM TB_SESSION
+         WHERE S_AUTH = #{sAuth}
+            OR USER_ID = #{userId}
+        <!--           AND SESSION_EXP &lt; SYSDATE-->
+    </delete>
+
+    <select id="selectCart" parameterType="Map" resultType="CamelListMap">
+        /* selectCart */
+        SELECT CART_ID
+             , PRODUCT_ID
+             , QUANTITY
+          FROM TB_CART
+         WHERE USER_ID = ${userId}
+           AND PRODUCT_ID = (CASE WHEN ${productId} = -1
+                                  THEN PRODUCT_ID
+                                  ELSE ${productId}
+                                  END)
+    </select>
+
+    <insert id="insertUser" parameterType="Map">
+        /* insertUser */
+        INSERT INTO TB_USER (
+            USER_ID
+          , EMAIL
+          , PASSWORD
+<!--          , LAST_NAME-->
+          , NAME
+        ) VALUES (
+            USER_SEQ.NEXTVAL
+          , #{email}
+          , #{hashPw}
+<!--          , #{lastName}-->
+          , #{name}
+        )
+    </insert>
+
+
+    <insert id="insertCart" parameterType="Map">
+        /* insertCart */
+        INSERT INTO TB_CART (
+            CART_ID,
+            USER_ID,
+            PRODUCT_ID,
+            QUANTITY
+        ) VALUES (
+            CART_SEQ.NEXTVAL,
+            #{userId},
+            #{productId},
+            #{quantity}
+        )
+
+    </insert>
+
+    <update id="updateCart" parameterType="Map">
+        /* updateCart */
+        UPDATE TB_CART
+           SET QUANTITY = #{quantity}
+             , LAST_ADD_DATE = SYSDATE
+         WHERE CART_ID = #{cartId}
+    </update>
+
+    <delete id="deleteCart" parameterType="Map">
+        /* deleteCart */
+        DELETE
+          FROM TB_CART
+         WHERE USER_ID = #{userId}
+           AND PRODUCT_ID = #{productId}
+    </delete>
+
+
+    <select id="selectCartProduct" parameterType="Map" resultType="CamelListMap">
+        /* selectCartProduct */
+        SELECT A.*
+             , B.*
+          FROM TB_CART A
+         INNER JOIN TB_PRODUCT B
+            ON A.PRODUCT_ID = B.PRODUCT_ID
+           AND A.USER_ID = #{userId}
+    </select>
+
+
+
+</mapper>
